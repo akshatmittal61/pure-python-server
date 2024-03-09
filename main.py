@@ -7,7 +7,10 @@ from multiprocessing import Process
 ignored_files = ['main.py', '.git', 'venv', '.idea']
 
 def run_server():
-    subprocess.run([sys.executable, "server.py"])
+    try:
+        subprocess.run([sys.executable, "server.py"])
+    except KeyboardInterrupt:
+        print("KeyboardInterrupt: Stopping the server...")
 
 def get_file_modified_times():
     return {
