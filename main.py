@@ -4,7 +4,7 @@ import os
 import time
 from multiprocessing import Process
 
-ignored_files = ['main.py', '.git', 'venv', '.idea']
+ignored_files = ['main.py', '.git/', 'venv', '.idea', '__pycache__/']
 
 def run_server():
     try:
@@ -13,10 +13,10 @@ def run_server():
         print("KeyboardInterrupt: Stopping the server...")
 
 def get_file_modified_times():
+    # get all files, whether on current level or in subdirectories, skip the files in ignored_files
+    all_but_ignored_files = [os.path.join(root, file) for root, dirs, files in os.walk('.') for file in files if file not in ignored_files and not any(ignored_file in os.path.join(root, file) for ignored_file in ignored_files)]
     return {
-        filename: os.path.getmtime(filename)
-                for filename in os.listdir('.')
-                if filename not in ignored_files
+        filename: os.path.getmtime(filename) for filename in all_but_ignored_files
     }
 
 def monitor_changes():
