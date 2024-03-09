@@ -3,6 +3,7 @@ from json import dumps
 import os
 import socket
 import errno
+from config import config
 
 class MyRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -34,9 +35,8 @@ def find_and_terminate_process_using_port(port):
 def run():
     httpd = None
     try:
-        print('Server is listening')
-        server_address = ('127.0.0.1', 8000)
-        httpd = HTTPServer(server_address, handler_factory)
+        print(f'Server is listening at {config.SERVER_ADDRESS}')
+        httpd = HTTPServer(config.SERVER_ADDRESS, handler_factory)
         httpd.serve_forever()
     except KeyboardInterrupt:
         print('Terminating connections')
