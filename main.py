@@ -4,13 +4,17 @@ import os
 import time
 from multiprocessing import Process
 
-ignored_files
+ignored_files = ['main.py', '.git', 'venv', '.idea']
 
 def run_server():
-    subprocess.run([sys.executable, "main.py"])
+    subprocess.run([sys.executable, "server.py"])
 
 def get_file_modified_times():
-    return {filename: os.path.getmtime(filename) for filename in os.listdir('.') if filename not in ['main.py', '.git', 'venv', '.idea']}
+    return {
+        filename: os.path.getmtime(filename)
+                for filename in os.listdir('.')
+                if filename not in ignored_files
+    }
 
 def monitor_changes():
     files = {}
@@ -19,13 +23,11 @@ def monitor_changes():
             time.sleep(1)  # Check for changes every second
             new_files = get_file_modified_times()
             if new_files != files:
-                print(files, new_files)
                 print("Changes detected, restarting server...")
                 files = new_files
                 # Start the server in a separate process
                 p = Process(target=run_server)
                 p.start()
-                p.join()  # Wait for the server process to complete
     except KeyboardInterrupt:
         print('Terminating watcher')
         exit(0)
