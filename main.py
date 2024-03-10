@@ -1,4 +1,4 @@
-from watcher import Watcher
+from server.watcher import Watcher
 
 if __name__ == "__main__":
     watcher = Watcher()
