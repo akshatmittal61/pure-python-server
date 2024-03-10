@@ -249,9 +249,11 @@ class Server:
 
     def listen(self):
         while True:
+            server_address = config.get('SERVER_ADDRESS')
+            port = config.get('PORT')
             try:
-                print(f'Server is listening at {config.SERVER_ADDRESS}')
-                self.httpd = HTTPServer(config.SERVER_ADDRESS, self.handler_factory)
+                print(f'Server is listening at {server_address}')
+                self.httpd = HTTPServer(config.get('SERVER_ADDRESS'), self.handler_factory)
                 self.httpd.serve_forever()
             except KeyboardInterrupt:
                 print('Terminating connections')
@@ -261,11 +263,11 @@ class Server:
             except OSError as e:
                 if e.errno == errno.EADDRINUSE:
                     # get pid of process which is using it
-                    pid = os.popen(f'lsof -ti tcp:{config.PORT}').read().strip()
-                    print(f'Current process: {os.getpid()} is trying to use port {config.PORT} but it is already in use by process with PID: {pid}')
+                    pid = os.popen(f'lsof -ti tcp:{port}').read().strip()
+                    print(f'Current process: {os.getpid()} is trying to use port {port} but it is already in use by process with PID: {pid}')
                     if self.httpd:
                         self.httpd.socket.close()
-                    find_and_terminate_process_using_port(config.PORT)
+                    find_and_terminate_process_using_port(port)
                     sleep(1)
                 else:
                     raise e
