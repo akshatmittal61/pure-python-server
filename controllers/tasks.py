@@ -1,4 +1,4 @@
-from services.server import Request, Response
+from server import Request, Response
 from constants.tasks import tasks
 from http import HTTPStatus
 

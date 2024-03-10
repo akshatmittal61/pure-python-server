@@ -1,4 +1,4 @@
-from services.server import Request, Response
+from server import Request, Response
 from http import HTTPStatus
 
 def get_root(request: Request, response: Response) -> Response:

@@ -1,123 +1,13 @@
 import errno
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from json import dumps, loads
 import os
-import socket
 from config import config
 from time import sleep
-from typing import Self, Callable
-
-def is_port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('127.0.0.1', port)) == 0
-
-def find_and_terminate_process_using_port(port):
-    if is_port_in_use(port):
-        if os.name == 'posix':  # For Unix-like systems (Linux, MacOS)
-            os.system(f'lsof -ti tcp:{port} | xargs -r kill -9')
-        elif os.name == 'nt':  # For Windows
-            os.system(f'netstat -ano | findstr :{port} | findstr LISTENING | '
-                  'awk "{print $5}" | xargs taskkill /F /PID')
-        else:
-            raise NotImplementedError(f"Unsupported OS: {os.name}")
-        
-initial_routes = {
-    'GET': [],
-    'POST': [],
-    'PUT': [],
-    'PATCH': [],
-    'DELETE': []
-}
-
-allowed_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-
-class Request:
-    def __init__(self, request_handler) -> None:
-        self.request_handler = request_handler
-        self.data = {}
-        self.query_params = {}
-        self.body = {}
-        self.headers = {}
-        self.method = ''
-        self.path = ''
-        self.request_version = ''
-        self.__parse_request__(request_handler)
-
-    def __parse_query_params__(self, query_params):
-        self.query_params = dict([param.split('=') for param in query_params.split('&')])
-
-    def __parse_body__(self):
-        content_length = int(self.headers['Content-Length'])
-        if content_length:
-            body_data = self.request_handler.rfile.read(content_length).decode('utf-8')
-            parsed_body = loads(body_data)
-            self.body = parsed_body
-
-    def __parse_headers__(self, headers):
-        self.headers = headers
-
-    def __parse_request__(self, request):
-        self.__parse_headers__(self.request_handler.headers)
-        if request:
-            self.method = request.requestline.split(' ')[0]
-            self.path = request.requestline.split(' ')[1]
-            self.request_version = request.requestline.split(' ')[2]
-            if '?' in self.path:
-                self.path, query_params = self.path.split('?')
-                self.__parse_query_params__(query_params)
-            if self.method in ['POST', 'PUT', 'PATCH']:
-                self.__parse_body__()
-
-    def build(self):
-        return {
-            'method': self.method,
-            'path': self.path,
-            'query_params': self.query_params,
-            'body': self.body,
-            'headers': self.headers,
-            'request_version': self.request_version
-        }
-
-    def parse(self):
-        self.__parse_request__(self.request_handler.requestline)
-        return self
-
-    def get(self, key):
-        return self.query_params[key] if key in self.query_params else None
-
-
-class Response:
-    def __init__(self, request_handler) -> None:
-        self.status_code = 200
-        self.response_data = {}
-        self.content_type = 'application/json'
-        self.request_handler = request_handler
-
-    def status(self, status_code: int) -> Self:
-        self.status_code = status_code
-        return self
-
-    def data(self, data: dict) -> Self:
-        self.response_data = data
-        return self
-
-    def content_type(self, content_type: str) -> Self:
-        self.content_type = content_type
-        return self
-
-    def build(self) -> dict:
-        return {
-            'status': self.status_code,
-            'response_data': self.response_data,
-            'content_type': self.content_type
-        }
-
-    def send(self) -> Self:
-        self.request_handler.send_response(self.status_code)
-        self.request_handler.send_header('Content-type', self.content_type)
-        self.request_handler.end_headers()
-        self.request_handler.wfile.write(dumps(self.response_data).encode('utf-8'))
-        return self
+from typing import Callable
+from server.response import Response
+from server.request import Request
+from server.utils import find_and_terminate_process_using_port
+from server.constants import initial_routes
 
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, allowed_routes=None, *args, **kwargs):

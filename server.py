@@ -1,4 +1,4 @@
-from services.server import Server
+from server import Server
 from controllers import get_root, get_health_api
 from controllers.tasks import get_tasks, get_task_by_id, add_task, update_task, delete_task
 
