@@ -5,6 +5,7 @@ import os
 import socket
 from config import config
 from time import sleep
+from typing import Self
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -30,9 +31,43 @@ initial_routes = {
 
 allowed_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
+class Response:
+    def __init__(self, request_handler) -> None:
+        self.status_code = 200
+        self.response_data = {}
+        self.content_type = 'application/json'
+        self.request_handler = request_handler
+
+    def status(self, status_code: int) -> Self:
+        self.status_code = status_code
+        return self
+
+    def data(self, data: dict) -> Self:
+        self.response_data = data
+        return self
+
+    def content_type(self, content_type: str) -> Self:
+        self.content_type = content_type
+        return self
+
+    def build(self) -> dict:
+        return {
+            'status': self.status_code,
+            'response_data': self.response_data,
+            'content_type': self.content_type
+        }
+
+    def send(self) -> Self:
+        self.request_handler.send_response(self.status_code)
+        self.request_handler.send_header('Content-type', self.content_type)
+        self.request_handler.end_headers()
+        self.request_handler.wfile.write(dumps(self.response_data).encode('utf-8'))
+        return self
+
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, allowed_routes = initial_routes, *args, **kwargs):
         self.allowed_routes = allowed_routes
+        self.response = Response(self)
         super().__init__(*args, **kwargs)
 
     def __is_method_allowed__(self, method, current_route):
@@ -51,14 +86,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         is_route_allowed = self.__is_route_allowed__(current_route)
         is_method_allowed = self.__is_method_allowed__(method, current_route)
         return is_route_allowed and not is_method_allowed
-    
-    def __response__(self, status, data, content_type = 'application/json'):
-        self.send_response(status)
-        self.send_header('Content-type', content_type)
-        self.end_headers()
-        self.wfile.write(dumps(data).encode('utf-8'))
 
-    def __api_controller__(self, method, current_route):
+    def __api_controller__(self, method, current_route) -> Response | None:
         current_controller = None
         if self.__is_method_allowed__(method, current_route):
             for route in self.allowed_routes[method]:
@@ -67,25 +96,24 @@ class RequestHandler(BaseHTTPRequestHandler):
                     break
         return current_controller
     
-    def __api_gateway__(self, method, route, controller):
-        if controller is None:
-            if self.__route_exists_but_method_not_allowed__(method, route):
-                self.__response__(405, { 'message': 'error', 'data': 'Method Not Allowed' })
-                return
-            else:
-                self.__response__(404, { 'message': 'error', 'data': 'Not Found' })
-                return
+    def __api_gateway__(self, method, route) -> Response:
+        if self.__route_exists_but_method_not_allowed__(method, route):
+            return self.response.status(405).data({ 'message': 'error', 'data': 'Method Not Allowed' }).send()
+        else:
+            return self.response.status(404).data({ 'message': 'error', 'data': 'Not Found' }).send()
 
     def do_GET(self):
         current_route = self.path
-        current_handler = self.__api_controller__('GET', current_route)
-        self.__api_gateway__('GET', current_route, current_handler)
+        controller = self.__api_controller__('GET', current_route)
+        if controller is None:
+            gateway_response = self.__api_gateway__('GET', current_route)
+            return gateway_response
         try:
-            response = current_handler()
-            self.__response__(response['status'], response['data'])
+            result: Response = controller({}, self.response)
+            return result.send()
         except Exception as e:
-            print('Error occurred:', e)
-            self.__response__(500, { 'message': 'error', 'data': 'Internal Server Error' })
+            print(f'Error occurred: {str(e)}')
+            return self.response.status(500).data({ 'message': 'error', 'data': str(e) }).send()
 
 
 class Server:
