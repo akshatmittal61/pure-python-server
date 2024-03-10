@@ -4,21 +4,30 @@ import os
 import socket
 import errno
 from config import config
-from services.server import listen
+from services.server import Server
 
-class MyRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
-        response_data = { 'message': 'success', 'data': 'Server health is good' }
-        response_json = dumps(response_data)
-        self.wfile.write(response_json.encode('utf-8'))
-        return self
+def get_root():
+    return { 
+        'status': 200,
+        'data': {
+            'message': 'Hello World'
+        }
+    }
 
-def handler_factory(*args):
-    return MyRequestHandler(*args)
+def get_health_api():
+    return { 
+        'status': 200,
+        'data': {
+            'message': 'success',
+            'data': 'Server health is good'
+        }
+    }
 
+routes = [
+    { 'method': 'GET', 'route': '/', 'handler': get_root },
+    { 'method': 'GET', 'route': '/health', 'handler': get_health_api }
+]
 
 if __name__ == '__main__':
-    listen(handler_factory=handler_factory)
+    app = Server(allowed_routes=routes)
+    app.listen()
