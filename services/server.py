@@ -1,11 +1,12 @@
 import errno
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from json import dumps
+from json import dumps, loads
 import os
 import socket
 from config import config
 from time import sleep
 from typing import Self
+from urllib.parse import urlparse
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -30,6 +31,62 @@ initial_routes = {
 }
 
 allowed_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+
+class Request:
+    def __init__(self, request_handler) -> None:
+        self.request_handler = request_handler
+        self.data = {}
+        self.query_params = {}
+        self.body = {}
+        self.headers = {}
+        self.method = ''
+        self.path = ''
+        self.request_version = ''
+        self.requestline = ''
+        self.__parse_request__(request_handler)
+
+    def __parse_query_params__(self, query_params):
+        self.query_params = dict([param.split('=') for param in query_params.split('&')])
+
+    def __parse_body__(self):
+        content_length = int(self.headers['Content-Length'])
+        body_data = self.request_handler.rfile.read(content_length).decode('utf-8')
+        parsed_body = loads(body_data)
+        self.body = parsed_body
+
+    def __parse_headers__(self, headers):
+        self.headers = headers
+
+    def __parse_request__(self, request):
+        if request:
+            self.method = request.requestline.split(' ')[0]
+            self.path = request.requestline.split(' ')[1]
+            self.request_version = request.requestline.split(' ')[2]
+            if '?' in self.path:
+                self.path, query_params = self.path.split('?')
+                self.__parse_query_params__(query_params)
+            if self.method in ['POST', 'PUT', 'PATCH']:
+                self.__parse_body__()
+        self.__parse_headers__(self.request_handler.headers)
+
+    def build(self):
+        return {
+            'method': self.method,
+            'path': self.path,
+            'query_params': self.query_params,
+            'body': self.body,
+            'headers': self.headers,
+            'request_version': self.request_version,
+            'requestline': self.requestline
+        }
+
+    def parse(self):
+        self.__parse_request__(self.request_handler.requestline)
+        return self
+
+    def get(self, key):
+        return self.query_params[key] if key in self.query_params else None
+
 
 class Response:
     def __init__(self, request_handler) -> None:
@@ -67,7 +124,6 @@ class Response:
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, allowed_routes = initial_routes, *args, **kwargs):
         self.allowed_routes = allowed_routes
-        self.response = Response(self)
         super().__init__(*args, **kwargs)
 
     def __is_method_allowed__(self, method, current_route):
@@ -98,22 +154,24 @@ class RequestHandler(BaseHTTPRequestHandler):
     
     def __api_gateway__(self, method, route) -> Response:
         if self.__route_exists_but_method_not_allowed__(method, route):
-            return self.response.status(405).data({ 'message': 'error', 'data': 'Method Not Allowed' }).send()
+            return self.res.status(405).data({ 'message': 'error', 'data': 'Method Not Allowed' }).send()
         else:
-            return self.response.status(404).data({ 'message': 'error', 'data': 'Not Found' }).send()
+            return self.res.status(404).data({ 'message': 'error', 'data': 'Not Found' }).send()
 
     def do_GET(self):
-        current_route = self.path
+        self.req = Request(self)
+        self.res = Response(self)
+        current_route = self.path.split('?')[0]
         controller = self.__api_controller__('GET', current_route)
         if controller is None:
             gateway_response = self.__api_gateway__('GET', current_route)
             return gateway_response
         try:
-            result: Response = controller({}, self.response)
+            result: Response = controller(self.req, self.res)
             return result.send()
         except Exception as e:
             print(f'Error occurred: {str(e)}')
-            return self.response.status(500).data({ 'message': 'error', 'data': str(e) }).send()
+            return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
 
 
 class Server:
@@ -142,7 +200,7 @@ class Server:
                     break
             except OSError as e:
                 if e.errno == errno.EADDRINUSE:
-                    # get pid of process which is using it and print it
+                    # get pid of process which is using it
                     pid = os.popen(f'lsof -ti tcp:{config.PORT}').read().strip()
                     print(f'Current process: {os.getpid()} is trying to use port {config.PORT} but it is already in use by process with PID: {pid}')
                     if self.httpd:

@@ -4,9 +4,10 @@ import os
 import socket
 import errno
 from config import config
-from services.server import Server, Response
+from services.server import Server, Request, Response
 
-def get_root(request, response: Response) -> Response:
+def get_root(request: Request, response: Response) -> Response:
+    print(request)
     return response.status(200).data({
         'message': 'success',
         'data': 'Hello World'
