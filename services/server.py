@@ -58,6 +58,7 @@ class Request:
         self.headers = headers
 
     def __parse_request__(self, request):
+        self.__parse_headers__(self.request_handler.headers)
         if request:
             self.method = request.requestline.split(' ')[0]
             self.path = request.requestline.split(' ')[1]
@@ -67,7 +68,6 @@ class Request:
                 self.__parse_query_params__(query_params)
             if self.method in ['POST', 'PUT', 'PATCH']:
                 self.__parse_body__()
-        self.__parse_headers__(self.request_handler.headers)
 
     def build(self):
         return {
@@ -165,6 +165,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         controller = self.__api_controller__('GET', current_route)
         if controller is None:
             gateway_response = self.__api_gateway__('GET', current_route)
+            return gateway_response
+        try:
+            result: Response = controller(self.req, self.res)
+            return result.send()
+        except Exception as e:
+            print(f'Error occurred: {str(e)}')
+            return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
+
+    def do_POST(self):
+        self.req = Request(self)
+        self.res = Response(self)
+        current_route = self.path.split('?')[0]
+        controller = self.__api_controller__('POST', current_route)
+        if controller is None:
+            gateway_response = self.__api_gateway__('POST', current_route)
             return gateway_response
         try:
             result: Response = controller(self.req, self.res)

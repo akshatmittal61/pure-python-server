@@ -7,7 +7,6 @@ from config import config
 from services.server import Server, Request, Response
 
 def get_root(request: Request, response: Response) -> Response:
-    print(request)
     return response.status(200).data({
         'message': 'success',
         'data': 'Hello World'
