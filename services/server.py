@@ -58,31 +58,34 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(dumps(data).encode('utf-8'))
 
-    def __api_handler__(self, method, current_route):
-        current_handler = None
+    def __api_controller__(self, method, current_route):
+        current_controller = None
         if self.__is_method_allowed__(method, current_route):
             for route in self.allowed_routes[method]:
                 if route[0] == current_route:
-                    current_handler = route[1]
+                    current_controller = route[1]
                     break
-        return current_handler
+        return current_controller
+    
+    def __api_gateway__(self, method, route, controller):
+        if controller is None:
+            if self.__route_exists_but_method_not_allowed__(method, route):
+                self.__response__(405, { 'message': 'error', 'data': 'Method Not Allowed' })
+                return
+            else:
+                self.__response__(404, { 'message': 'error', 'data': 'Not Found' })
+                return
 
     def do_GET(self):
         current_route = self.path
-        response = None
-        current_handler = self.__api_handler__('GET', current_route)
-        if current_handler is not None:
-            try:
-                response = current_handler()
-                self.__response__(response['status'], response['data'])
-            except Exception as e:
-                print('Error occurred:', e)
-                self.__response__(500, { 'message': 'error', 'data': 'Internal Server Error' })
-        else:
-            if self.__route_exists_but_method_not_allowed__('GET', current_route):
-                self.__response__(405, { 'message': 'error', 'data': 'Method Not Allowed' })
-            else:
-                self.__response__(404, { 'message': 'error', 'data': 'Not Found' })
+        current_handler = self.__api_controller__('GET', current_route)
+        self.__api_gateway__('GET', current_route, current_handler)
+        try:
+            response = current_handler()
+            self.__response__(response['status'], response['data'])
+        except Exception as e:
+            print('Error occurred:', e)
+            self.__response__(500, { 'message': 'error', 'data': 'Internal Server Error' })
 
 
 class Server:
