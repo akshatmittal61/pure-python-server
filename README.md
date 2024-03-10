@@ -11,15 +11,20 @@ A python server completely built with internal modules, without any external dep
 ## Usage
 
 Just clone the repository and start server with
+
 ```bash
+# For Linux and MacOS
 ./start.sh <development|staging|production>
+
+# For Windows
+sh start.sh <development|staging|production>
 ```
 
 ### Environment Config
 
-- For `development` environment variables, create a `.env.development` file and put variables in it.
-- For `staging` environment variables, create a `.env.staging` file and put variables in it.
-- For `production` environment variables, create a `.env.production` file and put variables in it.
+-   For `development` environment variables, create a `.env.development` file and put variables in it.
+-   For `staging` environment variables, create a `.env.staging` file and put variables in it.
+-   For `production` environment variables, create a `.env.production` file and put variables in it.
 
 ### Priority order for environment variables
 
