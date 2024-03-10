@@ -1,3 +1,5 @@
+ignored_files = ['watcher.py', '.git/', 'venv', '.idea', '__pycache__/']
+
 initial_routes = {
     'GET': [],
     'POST': [],

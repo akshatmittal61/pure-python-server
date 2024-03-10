@@ -1,5 +1,3 @@
-# Get 1st argument, which is optional, $1, check if it is development or staging production, if that set ENV to that, else throw error sphowing usage
-
 if [ -z "$1" ]; then
   echo "Usage: start.sh <development|staging|production>"
   exit 1

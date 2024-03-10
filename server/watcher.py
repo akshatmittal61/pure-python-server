@@ -3,7 +3,7 @@ import sys
 import os
 import time
 from multiprocessing import Process
-from constants import ignored_files
+from server.constants import ignored_files
 
 
 def get_file_modified_times():
