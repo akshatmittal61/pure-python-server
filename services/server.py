@@ -28,63 +28,74 @@ initial_routes = {
     'DELETE': []
 }
 
+allowed_methods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, allowed_routes = initial_routes, *args, **kwargs):
         self.allowed_routes = allowed_routes
-        print('RequestHandler init', self.allowed_routes)
         super().__init__(*args, **kwargs)
 
-    def do_GET(self):
-        current_route = self.path
+    def __is_method_allowed__(self, method, current_route):
+        return current_route in [routes[0] for routes in self.allowed_routes[method]]
+    
+    def __is_route_allowed__(self, current_route):
+        return (
+            self.__is_method_allowed__('GET', current_route) or
+            self.__is_method_allowed__('POST', current_route) or
+            self.__is_method_allowed__('PUT', current_route) or
+            self.__is_method_allowed__('PATCH', current_route) or
+            self.__is_method_allowed__('DELETE', current_route)
+        )
+    
+    def __route_exists_but_method_not_allowed__(self, method, current_route):
+        is_route_allowed = self.__is_route_allowed__(current_route)
+        is_method_allowed = self.__is_method_allowed__(method, current_route)
+        return is_route_allowed and not is_method_allowed
+    
+    def __response__(self, status, data, content_type = 'application/json'):
+        self.send_response(status)
+        self.send_header('Content-type', content_type)
+        self.end_headers()
+        self.wfile.write(dumps(data).encode('utf-8'))
+
+    def __api_handler__(self, method, current_route):
         current_handler = None
-        response = None
-        if current_route in [routes[0] for routes in self.allowed_routes['GET']]:
-            for route in self.allowed_routes['GET']:
-                print('in loop', route)
+        if self.__is_method_allowed__(method, current_route):
+            for route in self.allowed_routes[method]:
                 if route[0] == current_route:
                     current_handler = route[1]
                     break
-        elif current_route in [routes[0] for routes in self.allowed_routes['POST']] or current_route in [routes[0] for routes in self.allowed_routes['PUT']] or current_route in [routes[0] for routes in self.allowed_routes['PATCH']] or current_route in [routes[0] for routes in self.allowed_routes['DELETE']]:
-            self.send_response(405)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(dumps({ 'message': 'error', 'data': 'Method not allowed' }).encode('utf-8'))
-            return
+        return current_handler
+
+    def do_GET(self):
+        current_route = self.path
+        response = None
+        current_handler = self.__api_handler__('GET', current_route)
+        if current_handler is not None:
+            try:
+                response = current_handler()
+                self.__response__(response['status'], response['data'])
+            except Exception as e:
+                print('Error occurred:', e)
+                self.__response__(500, { 'message': 'error', 'data': 'Internal Server Error' })
         else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(dumps({ 'message': 'error', 'data': 'Route not found' }).encode('utf-8'))
-            return
-        try:
-            response = current_handler()
-            print('response:', response)
-            self.send_response(response['status'])
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(dumps(response['data']).encode('utf-8'))
-        except Exception as e:
-            print('Error occurred:', e)
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            self.wfile.write(dumps({ 'message': 'error', 'data': 'Internal Server Error' }).encode('utf-8'))
+            if self.__route_exists_but_method_not_allowed__('GET', current_route):
+                self.__response__(405, { 'message': 'error', 'data': 'Method Not Allowed' })
+            else:
+                self.__response__(404, { 'message': 'error', 'data': 'Not Found' })
 
 
 class Server:
 
     def __handler_factory__(self, *args, **kwargs):
-        print(42, self.allowed_routes, *args, **kwargs)
         return RequestHandler(self.allowed_routes, *args, **kwargs)
     
     def __init__(self, allowed_routes=[]):
         self.httpd = None
         self.allowed_routes = initial_routes
-        print(f'Original allowed_routes: {allowed_routes}')
         if allowed_routes:
             for route in allowed_routes:
                 self.allowed_routes[route['method']].append((route['route'], route['handler']))
-        print(f'allowed_routes: {self.allowed_routes}')
         self.handler_factory = self.__handler_factory__
 
     def listen(self):
