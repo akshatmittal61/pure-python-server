@@ -6,6 +6,7 @@ from time import sleep
 from typing import Callable
 from server.response import Response
 from server.request import Request
+from server.router import Router
 from server.utils import find_and_terminate_process_using_port
 from server.constants import initial_routes
 
@@ -130,9 +131,8 @@ class Server:
     def __handler_factory__(self, *args, **kwargs):
         return RequestHandler(self.allowed_routes, *args, **kwargs)
     
-    def __init__(self, allowed_routes=None):
-        if allowed_routes is None:
-            allowed_routes = []
+    def __init__(self, router: Router):
+        allowed_routes = router.get_routes()
         self.httpd = None
         self.allowed_routes = initial_routes
         if allowed_routes:
