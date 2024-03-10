@@ -188,6 +188,50 @@ class RequestHandler(BaseHTTPRequestHandler):
             print(f'Error occurred: {str(e)}')
             return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
 
+    def do_PUT(self):
+        self.req = Request(self)
+        self.res = Response(self)
+        current_route = self.path.split('?')[0]
+        controller = self.__api_controller__('PUT', current_route)
+        if controller is None:
+            gateway_response = self.__api_gateway__('PUT', current_route)
+            return gateway_response
+        try:
+            result: Response = controller(self.req, self.res)
+            return result.send()
+        except Exception as e:
+            print(f'Error occurred: {str(e)}')
+            return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
+
+    def do_PATCH(self):
+        self.req = Request(self)
+        self.res = Response(self)
+        current_route = self.path.split('?')[0]
+        controller = self.__api_controller__('PATCH', current_route)
+        if controller is None:
+            gateway_response = self.__api_gateway__('PATCH', current_route)
+            return gateway_response
+        try:
+            result: Response = controller(self.req, self.res)
+            return result.send()
+        except Exception as e:
+            print(f'Error occurred: {str(e)}')
+            return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
+
+    def do_DELETE(self):
+        self.req = Request(self)
+        self.res = Response(self)
+        current_route = self.path.split('?')[0]
+        controller = self.__api_controller__('DELETE', current_route)
+        if controller is None:
+            gateway_response = self.__api_gateway__('DELETE', current_route)
+            return gateway_response
+        try:
+            result: Response = controller(self.req, self.res)
+            return result.send()
+        except Exception as e:
+            print(f'Error occurred: {str(e)}')
+            return self.res.status(500).data({ 'message': 'error', 'data': str(e) }).send()
 
 class Server:
 
