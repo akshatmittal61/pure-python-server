@@ -8,6 +8,9 @@ class Router:
     def post(self, path, callback):
         self.routes.append({ 'method': 'POST', 'route': path, 'handler': callback })
 
+    def put(self, path, callback):
+        self.routes.append({ 'method': 'PUT', 'route': path, 'handler': callback })
+
     def patch(self, path, callback):
         self.routes.append({ 'method': 'PATCH', 'route': path, 'handler': callback })
 
