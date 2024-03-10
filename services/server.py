@@ -5,8 +5,7 @@ import os
 import socket
 from config import config
 from time import sleep
-from typing import Self
-from urllib.parse import urlparse
+from typing import Self, Callable
 
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -42,7 +41,6 @@ class Request:
         self.method = ''
         self.path = ''
         self.request_version = ''
-        self.requestline = ''
         self.__parse_request__(request_handler)
 
     def __parse_query_params__(self, query_params):
@@ -77,8 +75,7 @@ class Request:
             'query_params': self.query_params,
             'body': self.body,
             'headers': self.headers,
-            'request_version': self.request_version,
-            'requestline': self.requestline
+            'request_version': self.request_version
         }
 
     def parse(self):
@@ -123,7 +120,11 @@ class Response:
         return self
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def __init__(self, allowed_routes = initial_routes, *args, **kwargs):
+    def __init__(self, allowed_routes=None, *args, **kwargs):
+        self.req = None
+        self.res = None
+        if allowed_routes is None:
+            allowed_routes = initial_routes
         self.allowed_routes = allowed_routes
         super().__init__(*args, **kwargs)
 
@@ -144,7 +145,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         is_method_allowed = self.__is_method_allowed__(method, current_route)
         return is_route_allowed and not is_method_allowed
 
-    def __api_controller__(self, method, current_route) -> Response | None:
+    def __api_controller__(self, method, current_route) -> Callable[[Request, Response], Response] | None:
         current_controller = None
         if self.__is_method_allowed__(method, current_route):
             for route in self.allowed_routes[method]:
@@ -239,7 +240,9 @@ class Server:
     def __handler_factory__(self, *args, **kwargs):
         return RequestHandler(self.allowed_routes, *args, **kwargs)
     
-    def __init__(self, allowed_routes=[]):
+    def __init__(self, allowed_routes=None):
+        if allowed_routes is None:
+            allowed_routes = []
         self.httpd = None
         self.allowed_routes = initial_routes
         if allowed_routes:

@@ -1,7 +1,8 @@
 import os
 
 class ConfigManager:
-    def load_env(self):
+    @staticmethod
+    def load_env():
         environment = os.getenv('ENV') or 'development'
         print(f'Environment: {environment}')
 
@@ -58,9 +59,9 @@ class ConfigManager:
         self.ENV = os.getenv('ENV') or 'development'
 
     def get_all(self):
-        env_file_vaiables = {key: self.get(key) for key in self.__dict__ if not key.startswith('_')}
+        env_file_variables = {key: self.get(key) for key in self.__dict__ if not key.startswith('_')}
         os_env_variables = {key: os.getenv(key) for key in os.environ}
-        return {**env_file_vaiables, **os_env_variables}
+        return {**env_file_variables, **os_env_variables}
         
     def get(self, key):
         if hasattr(self, key):
