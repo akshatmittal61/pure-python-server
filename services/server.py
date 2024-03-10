@@ -50,9 +50,10 @@ class Request:
 
     def __parse_body__(self):
         content_length = int(self.headers['Content-Length'])
-        body_data = self.request_handler.rfile.read(content_length).decode('utf-8')
-        parsed_body = loads(body_data)
-        self.body = parsed_body
+        if content_length:
+            body_data = self.request_handler.rfile.read(content_length).decode('utf-8')
+            parsed_body = loads(body_data)
+            self.body = parsed_body
 
     def __parse_headers__(self, headers):
         self.headers = headers
