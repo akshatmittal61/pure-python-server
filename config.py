@@ -9,21 +9,52 @@ class ConfigManager:
         # Load environment variables from .env file(s)
         if environment == 'development':
             try:
-                print('Loading .env.local file...')
-                with open('.env.local') as f:
+                print('Loading .env.development file...')
+                with open('.env.development') as f:
                     for line in f:
                         key, value = line.strip().split('=')
                         os.environ[key] = value
             except FileNotFoundError:
-                print('No .env.local file found, loading .env file...')
+                print('No .env.development file found, loading .env.local file...')
                 try:
-                    with open('.env') as f:
+                    with open('.env.local') as f:
                         for line in f:
                             key, value = line.strip().split('=')
                             os.environ[key] = value
                 except FileNotFoundError:
-                    print('No .env file found, skipping...')
-                    pass
+                    print('No .env.local file found, loading .env file...')
+                    try:
+                        with open('.env') as f:
+                            for line in f:
+                                key, value = line.strip().split('=')
+                                os.environ[key] = value
+                    except FileNotFoundError:
+                        print('No .env file found, skipping...')
+                        pass
+        elif environment == 'staging':
+            try:
+                print('Loading .env.staging file...')
+                with open('.env.staging') as f:
+                    for line in f:
+                        key, value = line.strip().split('=')
+                        os.environ[key] = value
+            except FileNotFoundError:
+                print('No .env.staging file found, loading .env.local file...')
+                try:
+                    with open('.env.local') as f:
+                        for line in f:
+                            key, value = line.strip().split('=')
+                            os.environ[key] = value
+                except FileNotFoundError:
+                    print('No .env.local file found, loading .env file...')
+                    try:
+                        with open('.env') as f:
+                            for line in f:
+                                key, value = line.strip().split('=')
+                                os.environ[key] = value
+                    except FileNotFoundError:
+                        print('No .env file found, skipping...')
+                        pass
         elif environment == 'production':
             try:
                 print('Loading .env.production file...')
@@ -32,15 +63,22 @@ class ConfigManager:
                         key, value = line.strip().split('=')
                         os.environ[key] = value
             except FileNotFoundError:
-                print('No .env.production file found, loading .env file...')
+                print('No .env.production file found, loading .env.local file...')
                 try:
-                    with open('.env') as f:
+                    with open('.env.local') as f:
                         for line in f:
                             key, value = line.strip().split('=')
                             os.environ[key] = value
                 except FileNotFoundError:
-                    print('No .env file found, skipping...')
-                    pass
+                    print('No .env.local file found, loading .env file...')
+                    try:
+                        with open('.env') as f:
+                            for line in f:
+                                key, value = line.strip().split('=')
+                                os.environ[key] = value
+                    except FileNotFoundError:
+                        print('No .env file found, skipping...')
+                        pass
         else:
             try:
                 print('Loading .env file...')
